@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #000000;
+  stroke-width: 1px;
+}
+
+.link {
+  stroke: #999444;
+  stroke-opacity: .6;
+}
+
+</style>
+  <head>
+    <script src="d3.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+<body>
+  <button onclick="stop_time()">Stop</button>
+  <script>
+        var c10 = d3.scale.category10();
+           var svg = d3.select("body")
+             .append("svg")
+             .attr("width", 1200)
+             .attr("height", 800);
+
+        function update(data){
+
+            var links = svg.selectAll("link")
+               .data(data.links);
+            
+            links.enter()
+               .append("line")
+               .attr("class", "link")
+               .attr("x1", function(l) {
+                 var sourceNode = data.nodes.filter(function(d, i) {
+                   return i == l.source
+                 })[0];
+                 d3.select(this).attr("y1", sourceNode.y);
+                 return sourceNode.x
+               })
+               .attr("x2", function(l) {
+                 var targetNode = data.nodes.filter(function(d, i) {
+                   return i == l.target
+                 })[0];
+                 d3.select(this).attr("y2", targetNode.y);
+                 return targetNode.x
+               })
+               .attr("fill", "none")
+               .attr("stroke", "white");
+
+               links.exit().remove();
+
+             var nodes = svg.selectAll("node")
+               .data(data.nodes);
+
+              nodes.enter()
+                 .append("circle")
+                 .attr("class", "node")
+                 .attr("cx", function(d) {
+                   return d.x;
+                 })
+                 .attr("cy", function(d) {
+                   return d.y;
+                 })
+                 .attr("r", function(d){return d.size;})
+                 .attr("fill", function(d, i) {
+                   return d.color;
+                 });
+
+                 nodes.exit().remove();
+          }
+
+        function color_key(color){
+          if(color=="grey"){return 0;}
+          if(color=="white"){return 1;}
+          if(color=="blue"){return 2;}
+          if(color=="red"){return 2;}
+        }
+
+        function stop_time(){
+          clearInterval(timerId);
+        }
+
+        function build_graph(){
+          layers = [[1,2,3,],[1,2,3,4],[1,2]];
+
+          node_array=[];
+          link_array=[];
+          dim_size=10;
+          scale = 500;
+          link_size:10;
+          for(var x=0;x<dim_size;x++){
+            for(var y=0;y<dim_size;y++){
+              node_array.push({"name":x+"-"+y,"x":x*scale/dim_size+.5*scale/dim_size,"y":y*scale/dim_size+.5*scale/dim_size,"size":10,"color":"grey"});
+            }
+          }
+
+          for(var s=0;s<node_array.length;s++){  
+              if(s>0 && s%Math.sqrt(node_array.length)!=0){
+                if(link_array.indexOf({"source":s,"target":s-1})==-1){link_array.push({"source":s,"target":s-1});}
+                if(link_array.indexOf({"source":s-1,"target":s})==-1){link_array.push({"source":s-1,"target":s});}
+              }
+              if(s+Math.sqrt(node_array.length)<node_array.length){
+                if(link_array.indexOf({"source":s,"target":s+Math.sqrt(node_array.length)})==-1){link_array.push({"source":s,"target":s+Math.sqrt(node_array.length)});}
+                if(link_array.indexOf({"source":s+Math.sqrt(node_array.length),"target":s})==-1){link_array.push({"source":s+Math.sqrt(node_array.length),"target":s});}
+              }
+          }
+          data = {"nodes": node_array, "links": link_array};
+          update(data);
+        }
+
+        function search(start_num,search_name){          
+          stack = [start_num];
+
+          timerId = setInterval(function() {
+            //node_array[col*Math.sqrt(node_array.length)+row].color="red";
+            //while(stack.length>0){
+              top_node = stack.pop();
+
+              if(node_array[top_node].name==search_name){alert("Found"); stop_time(); return top_node;}
+
+               stack.sort(function(a,b){
+                return color_key(node_array[a].color)*Math.sqrt(Math.pow((node_array[a.target].x-node_array[top_node].x),2)+Math.pow((node_array[a.target].y-node_array[top_node].y),2)) - color_key(node_array[b].color)*Math.sqrt(Math.pow((node_array[b.target].x-node_array[top_node].x),2)+Math.pow((node_array[b.target].y-node_array[top_node].y),2)); 
+                });
+
+              node_array[top_node].color="red";
+              
+              data = {"nodes": node_array, "links": link_array};
+              update(data);
+
+              node_array[top_node].color="blue";           
+              
+              valid_link_array = link_array.filter(function(t){            
+                return (t.source==top_node && t.target!=top_node && node_array[t.target].color!="blue" && node_array[t.target].color!="red" && (stack.indexOf(t.target)==-1));
+              });
+
+              for (valid_link in valid_link_array){              
+                  stack.push(valid_link_array[valid_link].target);                  
+                  node_array[valid_link_array[valid_link].target].color="white";  
+              }             
+
+            //}            
+            if(stack.length==0){clearInterval(timerId); alert("Exit");}}, 0);
+            }
+
+    //search(5,"7-8");
+    build_graph();
+    </script> 
+</body>

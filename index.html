@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #000000;
+  stroke-width: 1px;
+}
+
+.link {
+  stroke: #999444;
+  stroke-opacity: .6;
+}
+
+</style>
+  <head>
+    <script src="d3.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+</head>
+<body>
+  <button onclick="stop_time()">Stop</button>
+  <script>
+        var c10 = d3.scale.category10();
+           var svg = d3.select("body")
+             .append("svg")
+             .attr("width", 1200)
+             .attr("height", 800);
+
+        function update(data){
+
+            var links = svg.selectAll("link")
+               .data(data.links);
+            
+            links.enter()
+               .append("line")
+               .attr("class", "link")
+               .attr("x1", function(l) {
+                 var sourceNode = data.nodes.filter(function(d, i) {
+                   return i == l.source
+                 })[0];
+                 d3.select(this).attr("y1", sourceNode.y);
+                 return sourceNode.x
+               })
+               .attr("x2", function(l) {
+                 var targetNode = data.nodes.filter(function(d, i) {
+                   return i == l.target
+                 })[0];
+                 d3.select(this).attr("y2", targetNode.y);
+                 return targetNode.x
+               })
+               .attr("fill", "none")
+               .attr("stroke", "white");               
+
+               links.exit().remove();
+
+             var nodes = svg.selectAll("node")
+               .data(data.nodes);
+
+              nodes.enter()
+                 .append("circle")
+                 .attr("class", "node")
+                 .attr("cx", function(d) {
+                   return d.x;
+                 })
+                 .attr("cy", function(d) {
+                   return d.y;
+                 })
+                 .attr("r", function(d){return d.size;})
+                 .attr("fill", function(d, i) {
+                   return d.color;
+                 });
+
+                 nodes.enter().append("text")
+                  .attr("x", function(d){return d.x+8;})
+                  .attr("y", function(d){return d.y-8;})
+                  .attr("fill", function(d){return d.color;})
+                  .text(function(d){return d.name;});
+          
+
+                 nodes.exit().remove();
+          }
+
+        function color_key(color){
+          if(color=="grey"){return 0;}
+          if(color=="white"){return 1;}
+          if(color=="blue"){return 2;}
+          if(color=="red"){return 2;}
+        }
+
+        function stop_time(){
+          clearInterval(timerId);
+        }
+
+        function build_graph(nodes,layers,links){          
+          node_array=[];
+          link_array=[];
+
+          scale = 50;
+          link_size:10;
+
+          for(var row=0;row<layers.length;row++){
+            for(var row_i=0;row_i<layers[row].length;row_i++){
+              node_array.push({"name":layers[row][row_i],"x":row_i*scale+50,"y":row*scale+50,"size":10,"color":"grey"});
+            }
+          }
+
+          for(var l=0;l<links.length;l++)
+          {
+            link_array.push({"source":nodes.indexOf(links[l][0]),"target":nodes.indexOf(links[l][1])});
+          }
+
+          data = {"nodes": node_array, "links": link_array};
+          update(data);
+        }
+
+        function search(start_num,search_name){          
+          stack = [start_num];
+
+          timerId = setInterval(function() {
+            //node_array[col*Math.sqrt(node_array.length)+row].color="red";
+            //while(stack.length>0){
+              top_node = stack.pop();
+
+              if(node_array[top_node].name==search_name){alert("Found"); stop_time(); return top_node;}
+
+               stack.sort(function(a,b){
+                return color_key(node_array[a].color)*Math.sqrt(Math.pow((node_array[a.target].x-node_array[top_node].x),2)+Math.pow((node_array[a.target].y-node_array[top_node].y),2)) - color_key(node_array[b].color)*Math.sqrt(Math.pow((node_array[b.target].x-node_array[top_node].x),2)+Math.pow((node_array[b.target].y-node_array[top_node].y),2)); 
+                });
+
+              node_array[top_node].color="red";
+              
+              data = {"nodes": node_array, "links": link_array};
+              update(data);
+
+              node_array[top_node].color="blue";           
+              
+              valid_link_array = link_array.filter(function(t){            
+                return (t.source==top_node && t.target!=top_node && node_array[t.target].color!="blue" && node_array[t.target].color!="red" && (stack.indexOf(t.target)==-1));
+              });
+
+              for (valid_link in valid_link_array){              
+                  stack.push(valid_link_array[valid_link].target);                  
+                  node_array[valid_link_array[valid_link].target].color="white";  
+              }             
+
+            //}            
+            if(stack.length==0){clearInterval(timerId); alert("Exit");}}, 0);
+            }
+
+    //search(0,"1-2");
+    nodes=['A','B','C','D','E','F','G','H','I'];
+    layers = [['A','B','C'],['D','E','F','G'],['H','I']];
+    links=[];
+    //for every layer
+    for(var m=0;m<layers.length-1;m++)
+    {      
+      //and every next layer
+      var n=m+1;
+      alert(layers[m]+" "+m+" "+layers[n]+" "+n);
+      //length of the first layer
+      var i=layers[m].length;
+      //length of the seconds layer
+      var j=layers[n].length;
+      for(var i=0;i<layers[m].length;i++){
+        for(var j=0;j<layers[n].length;j++){
+          links.push([layers[m][i],layers[n][j]]);
+        }
+      }
+    }
+    alert(links);
+    build_graph(nodes, layers, links);
+    </script> 
+</body>
